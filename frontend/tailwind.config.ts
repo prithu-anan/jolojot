@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,17 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				rain: {
+					light: '#64B5F6',
+					medium: '#2196F3',
+					heavy: '#1565C0',
+					extreme: '#0D47A1',
+				},
+				safety: {
+					safe: '#4CAF50',
+					warning: '#FF9800',
+					danger: '#F44336',
 				}
 			},
 			borderRadius: {
@@ -84,11 +96,22 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'rain-drop': {
+					'0%': { transform: 'translateY(0) scale(1)', opacity: '0' },
+					'50%': { transform: 'translateY(10px) scale(1)', opacity: '0.7' },
+					'100%': { transform: 'translateY(20px) scale(0.9)', opacity: '0' }
+				},
+				'pulse-alert': {
+					'0%, 100%': { opacity: '1' },
+					'50%': { opacity: '0.6' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'rain-drop': 'rain-drop 1.5s infinite',
+				'pulse-alert': 'pulse-alert 2s infinite'
 			}
 		}
 	},
