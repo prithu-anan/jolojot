@@ -9,7 +9,103 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      forum_posts: {
+        Row: {
+          content: string
+          created_at: string
+          downvotes: number
+          id: string
+          location: string
+          title: string
+          updated_at: string
+          upvotes: number
+          user_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          downvotes?: number
+          id?: string
+          location: string
+          title: string
+          updated_at?: string
+          upvotes?: number
+          user_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          downvotes?: number
+          id?: string
+          location?: string
+          title?: string
+          updated_at?: string
+          upvotes?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      post_images: {
+        Row: {
+          created_at: string
+          id: string
+          image_url: string
+          post_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          image_url: string
+          post_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          image_url?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_images_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_votes: {
+        Row: {
+          created_at: string
+          id: string
+          post_id: string
+          user_id: string
+          vote_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          post_id: string
+          user_id: string
+          vote_type: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          post_id?: string
+          user_id?: string
+          vote_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_votes_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
