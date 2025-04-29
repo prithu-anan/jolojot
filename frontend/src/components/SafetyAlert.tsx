@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Warning, CloudRain } from 'lucide-react';
+import { CircleAlert, CloudRain } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -60,7 +60,7 @@ const SafetyAlert: React.FC<SafetyAlertProps> = ({
     <div className="space-y-6">
       <Alert className={cn("border-l-4", alertClasses[level])}>
         <div className="flex items-start">
-          <Warning className={cn("h-5 w-5 mr-2", iconClasses[level])} />
+          <CircleAlert className={cn("h-5 w-5 mr-2", iconClasses[level])} />
           <div>
             <AlertTitle className="text-lg font-semibold">Weather Alert</AlertTitle>
             <AlertDescription className="mt-1">{message}</AlertDescription>
