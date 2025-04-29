@@ -1,82 +1,62 @@
 
 import React, { useState } from 'react';
-import { ArrowRight, MapPin, Search } from 'lucide-react';
+import { ArrowRight, MapPin, Search, AlertTriangle, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
-interface RouteOption {
-  id: number;
-  name: string;
-  duration: string;
-  distance: string;
-  safety: 'safe' | 'warning' | 'danger';
-  description: string;
-}
-
-const mockRouteOptions: RouteOption[] = [
-  {
-    id: 1,
-    name: 'Recommended Route',
-    duration: '25 min',
-    distance: '3.2 miles',
-    safety: 'safe',
-    description: 'Avoids all flooded areas, uses elevated roads'
-  },
-  {
-    id: 2,
-    name: 'Fastest Route',
-    duration: '18 min',
-    distance: '2.8 miles',
-    safety: 'warning',
-    description: 'Passes through area with moderate rain intensity'
-  },
-  {
-    id: 3,
-    name: 'Shortest Route',
-    duration: '22 min',
-    distance: '2.5 miles',
-    safety: 'danger',
-    description: 'Has reported flooding on Lincoln Ave'
-  }
-];
+import { 
+  findSafeRoutes, 
+  Route, 
+  formatDistance, 
+  formatDuration, 
+  getSafetyLevel 
+} from '@/utils/routeUtils';
 
 const RoutePlanner: React.FC = () => {
   const [startLocation, setStartLocation] = useState('');
   const [endLocation, setEndLocation] = useState('');
   const [isSearching, setIsSearching] = useState(false);
-  const [routes, setRoutes] = useState<RouteOption[]>([]);
-  const [selectedRoute, setSelectedRoute] = useState<RouteOption | null>(null);
+  const [routes, setRoutes] = useState<Route[]>([]);
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!startLocation || !endLocation) return;
     
     setIsSearching(true);
-    // Simulate API call
-    setTimeout(() => {
-      setRoutes(mockRouteOptions);
+    setError(null);
+    
+    try {
+      // Use the findSafeRoutes function from routeUtils
+      const routeOptions = await findSafeRoutes(startLocation, endLocation);
+      setRoutes(routeOptions);
+      setSelectedRoute(null);
+    } catch (err) {
+      console.error("Error finding routes:", err);
+      setError("Unable to find routes. Please try different locations.");
+    } finally {
       setIsSearching(false);
-    }, 1500);
-  };
-
-  const handleSelectRoute = (route: RouteOption) => {
-    setSelectedRoute(route);
-  };
-
-  const getSafetyColor = (safety: string) => {
-    switch(safety) {
-      case 'safe': return 'bg-safety-safe';
-      case 'warning': return 'bg-safety-warning';
-      case 'danger': return 'bg-safety-danger';
-      default: return 'bg-gray-400';
     }
   };
 
-  const getSafetyText = (safety: string) => {
-    switch(safety) {
+  const handleSelectRoute = (route: Route) => {
+    setSelectedRoute(route);
+  };
+
+  const getSafetyColor = (safetyLevel: 'safe' | 'warning' | 'danger') => {
+    switch(safetyLevel) {
+      case 'safe': return 'bg-green-500 text-white';
+      case 'warning': return 'bg-amber-500 text-white';
+      case 'danger': return 'bg-red-500 text-white';
+      default: return 'bg-gray-400 text-white';
+    }
+  };
+
+  const getSafetyText = (safetyLevel: 'safe' | 'warning' | 'danger') => {
+    switch(safetyLevel) {
       case 'safe': return 'Safe route';
       case 'warning': return 'Use caution';
       case 'danger': return 'Not recommended';
@@ -133,40 +113,127 @@ const RoutePlanner: React.FC = () => {
             </div>
           </form>
 
+          {error && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           {routes.length > 0 && (
             <div className="mt-6 space-y-4">
               <div className="text-sm font-medium text-muted-foreground">Available Routes:</div>
               <div className="space-y-3">
-                {routes.map((route) => (
-                  <div 
-                    key={route.id}
-                    className={cn(
-                      "p-4 border rounded-lg cursor-pointer transition-all",
-                      selectedRoute?.id === route.id ? "border-primary bg-primary/5" : "hover:border-primary/50"
-                    )}
-                    onClick={() => handleSelectRoute(route)}
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="font-medium">{route.name}</div>
-                      <div className="flex items-center">
-                        <span className="text-sm mr-3">{route.duration} • {route.distance}</span>
-                        <div className={cn(
-                          "text-xs text-white px-2 py-1 rounded-full flex items-center",
-                          getSafetyColor(route.safety)
-                        )}>
-                          {getSafetyText(route.safety)}
+                {routes.map((route) => {
+                  const safetyLevel = getSafetyLevel(route.safetyScore);
+                  return (
+                    <div 
+                      key={route.id}
+                      className={cn(
+                        "p-4 border rounded-lg cursor-pointer transition-all",
+                        selectedRoute?.id === route.id ? "border-primary bg-primary/5" : "hover:border-primary/50"
+                      )}
+                      onClick={() => handleSelectRoute(route)}
+                    >
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="font-medium">{route.name}</div>
+                        <div className="flex items-center">
+                          <span className="text-sm mr-3">
+                            {formatDuration(route.totalDuration)} • {formatDistance(route.totalDistance)}
+                          </span>
+                          <div className={cn(
+                            "text-xs px-2 py-1 rounded-full flex items-center",
+                            getSafetyColor(safetyLevel)
+                          )}>
+                            {getSafetyText(safetyLevel)}
+                          </div>
                         </div>
                       </div>
+                      
+                      {route.safetyIssues.length > 0 && (
+                        <div className="bg-muted p-2 rounded mt-2 text-sm">
+                          <div className="font-medium mb-1 flex items-center">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Safety Issues:
+                          </div>
+                          <ul className="list-disc pl-5">
+                            {route.safetyIssues.map((issue, idx) => (
+                              <li key={idx} className={cn(
+                                "text-xs",
+                                issue.severity === 'danger' && "text-red-600",
+                                issue.severity === 'warning' && "text-amber-600"
+                              )}>
+                                {issue.description}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
-                    <p className="text-sm text-muted-foreground">{route.description}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {selectedRoute && (
                 <div className="mt-6">
+                  <div className="p-4 border rounded-lg bg-muted mb-4">
+                    <h3 className="font-medium text-lg mb-2">Route Map</h3>
+                    <div className="bg-background rounded-lg p-4 h-64 flex items-center justify-center relative overflow-hidden">
+                      {/* Simple visual representation of the route */}
+                      <div className="w-full h-full relative">
+                        <div className="absolute top-1/4 left-1/4 w-2 h-2 rounded-full bg-primary z-10">
+                          <div className="absolute -top-6 -left-2 bg-background p-1 rounded shadow-sm text-xs">
+                            Start
+                          </div>
+                        </div>
+                        <div className="absolute bottom-1/4 right-1/4 w-2 h-2 rounded-full bg-primary z-10">
+                          <div className="absolute -top-6 -left-2 bg-background p-1 rounded shadow-sm text-xs">
+                            End
+                          </div>
+                        </div>
+                        
+                        {/* Route path - dynamically style based on safety */}
+                        <svg className="absolute inset-0 w-full h-full">
+                          <path 
+                            d={`M ${window.innerWidth/4} ${window.innerHeight/4} 
+                                C ${window.innerWidth/2} ${window.innerHeight/3}, 
+                                  ${window.innerWidth/2} ${window.innerHeight/1.5}, 
+                                  ${window.innerWidth/1.33} ${window.innerHeight/1.33}`} 
+                            fill="none" 
+                            strokeWidth="3" 
+                            stroke={selectedRoute.safetyScore > 80 ? "#22c55e" : 
+                                  selectedRoute.safetyScore > 50 ? "#f59e0b" : "#ef4444"} 
+                            strokeDasharray={selectedRoute.safetyScore < 50 ? "5,5" : "none"}
+                          />
+                        </svg>
+                        
+                        {/* Safety issues markers */}
+                        {selectedRoute.safetyIssues.map((issue, idx) => (
+                          <div 
+                            key={idx}
+                            className={cn(
+                              "absolute w-4 h-4 rounded-full flex items-center justify-center",
+                              issue.severity === 'danger' ? "bg-red-500" : 
+                              issue.severity === 'warning' ? "bg-amber-500" : 
+                              "bg-blue-500"
+                            )}
+                            style={{ 
+                              top: `${30 + (idx * 15)}%`, 
+                              left: `${35 + (idx * 15)}%` 
+                            }}
+                          >
+                            <AlertTriangle className="h-2 w-2 text-white" />
+                            <div className="absolute -top-6 -left-2 bg-background p-1 rounded shadow-sm text-xs whitespace-nowrap">
+                              {issue.type}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                   <Button className="w-full">
-                    Navigate Now <ArrowRight className="ml-2 h-4 w-4" />
+                    Navigate Now <Navigation className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
               )}
