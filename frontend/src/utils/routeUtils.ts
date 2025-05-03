@@ -50,32 +50,47 @@ export const findSafeRoutes = async (
     ? await geocodeLocation(end)
     : end;
   
-  // Generate mock routes
+  // Calculate approximate distance between points in kilometers using Haversine formula
+  const distance = calculateDistance(startPoint, endPoint);
+  console.log(`Calculated distance: ${distance} km`);
+  
+  // Dhaka to Khulna specific route data (approximately 270km by road)
+  const isDhakaToKhulna = 
+    (startPoint.name?.toLowerCase() === 'dhaka' && endPoint.name?.toLowerCase() === 'khulna') ||
+    (startPoint.name?.toLowerCase() === 'khulna' && endPoint.name?.toLowerCase() === 'dhaka');
+
+  // Scale factors for the dummy routes
+  const totalDistance = isDhakaToKhulna ? 270000 : Math.round(distance * 1000); // convert km to meters
+  const baseTime = Math.round(totalDistance / 50 * 3.6); // assuming 50 km/h average speed
+  
+  // Generate mock routes with more realistic data
   return [
     {
       id: "route-1",
-      name: "Recommended Route",
+      name: "Safest Route",
       startLocation: startPoint,
       endLocation: endPoint,
-      segments: generateMockSegments(startPoint, endPoint, 'safe'),
-      totalDistance: 5150, // 5.15 km
-      totalDuration: 1500, // 25 minutes
-      safetyScore: 95,
+      segments: generateMockSegments(startPoint, endPoint, 'safe', totalDistance),
+      totalDistance: Math.round(totalDistance * 1.15), // slightly longer but safer
+      totalDuration: Math.round(baseTime * 1.3), // takes longer due to safety precautions
+      safetyScore: 92,
       safetyIssues: []
     },
     {
       id: "route-2",
-      name: "Fastest Route",
+      name: "Balanced Route",
       startLocation: startPoint,
       endLocation: endPoint,
-      segments: generateMockSegments(startPoint, endPoint, 'medium'),
-      totalDistance: 4500, // 4.5 km
-      totalDuration: 1080, // 18 minutes
+      segments: generateMockSegments(startPoint, endPoint, 'medium', totalDistance),
+      totalDistance: totalDistance,
+      totalDuration: baseTime,
       safetyScore: 75,
       safetyIssues: [
         {
           type: "flooding",
-          description: "Moderate flooding reported on part of the route",
+          description: isDhakaToKhulna 
+            ? "Moderate flooding reported near Faridpur" 
+            : "Moderate flooding reported on part of the route",
           severity: "warning",
           location: {
             lat: startPoint.lat + (endPoint.lat - startPoint.lat) * 0.4,
@@ -89,14 +104,16 @@ export const findSafeRoutes = async (
       name: "Shortest Route",
       startLocation: startPoint,
       endLocation: endPoint,
-      segments: generateMockSegments(startPoint, endPoint, 'dangerous'),
-      totalDistance: 4000, // 4 km
-      totalDuration: 1320, // 22 minutes
+      segments: generateMockSegments(startPoint, endPoint, 'dangerous', totalDistance),
+      totalDistance: Math.round(totalDistance * 0.9), // shortest distance
+      totalDuration: Math.round(baseTime * 1.1), // takes longer due to poor conditions
       safetyScore: 45,
       safetyIssues: [
         {
           type: "flooding",
-          description: "Severe flooding reported on Lincoln Ave",
+          description: isDhakaToKhulna 
+            ? "Severe flooding reported on Jessore Highway" 
+            : "Severe flooding reported on multiple road segments",
           severity: "danger",
           location: {
             lat: startPoint.lat + (endPoint.lat - startPoint.lat) * 0.3,
@@ -105,7 +122,9 @@ export const findSafeRoutes = async (
         },
         {
           type: "closure",
-          description: "Road closure at Broadway intersection",
+          description: isDhakaToKhulna 
+            ? "Road closure near Magura due to water levels" 
+            : "Road closure due to flooding",
           severity: "danger",
           location: {
             lat: startPoint.lat + (endPoint.lat - startPoint.lat) * 0.7,
@@ -117,52 +136,78 @@ export const findSafeRoutes = async (
   ];
 };
 
+// Haversine formula to calculate distance between two points in kilometers
+function calculateDistance(point1: RoutePoint, point2: RoutePoint): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = toRadians(point2.lat - point1.lat);
+  const dLon = toRadians(point2.lon - point1.lon);
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(toRadians(point1.lat)) * Math.cos(toRadians(point2.lat)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function toRadians(degrees: number): number {
+  return degrees * (Math.PI / 180);
+}
+
 // Mock function to generate segments
 const generateMockSegments = (
   start: RoutePoint, 
   end: RoutePoint, 
-  riskLevel: 'safe' | 'medium' | 'dangerous'
+  riskLevel: 'safe' | 'medium' | 'dangerous',
+  totalDistance: number
 ): RouteSegment[] => {
   // In a real app, this would generate proper segments based on mapping data
   const segments: RouteSegment[] = [];
   
-  // Create sample segments
-  const midpoint1: RoutePoint = {
-    lat: start.lat + (end.lat - start.lat) * 0.33,
-    lon: start.lon + (end.lon - start.lon) * 0.33
-  };
+  // Create more intermediate points for longer routes
+  const numSegments = totalDistance > 100000 ? 5 : 3;
+  const segmentDistance = totalDistance / numSegments;
   
-  const midpoint2: RoutePoint = {
-    lat: start.lat + (end.lat - start.lat) * 0.66,
-    lon: start.lon + (end.lon - start.lon) * 0.66
-  };
+  let currentPoint = start;
   
-  segments.push({
-    startPoint: start,
-    endPoint: midpoint1,
-    distance: 1500,
-    duration: 360,
-    floodRisk: riskLevel === 'safe' ? 'none' : riskLevel === 'medium' ? 'low' : 'medium',
-    roadType: 'major'
-  });
-  
-  segments.push({
-    startPoint: midpoint1,
-    endPoint: midpoint2,
-    distance: 1800,
-    duration: 480,
-    floodRisk: riskLevel === 'safe' ? 'low' : riskLevel === 'medium' ? 'medium' : 'high',
-    roadType: 'local'
-  });
-  
-  segments.push({
-    startPoint: midpoint2,
-    endPoint: end,
-    distance: 1700,
-    duration: 420,
-    floodRisk: riskLevel === 'safe' ? 'none' : riskLevel === 'medium' ? 'medium' : 'extreme',
-    roadType: 'highway'
-  });
+  for (let i = 1; i <= numSegments; i++) {
+    const ratio = i / numSegments;
+    const nextPoint: RoutePoint = i === numSegments 
+      ? end 
+      : {
+          lat: start.lat + (end.lat - start.lat) * ratio,
+          lon: start.lon + (end.lon - start.lon) * ratio
+        };
+    
+    // Vary the risk based on the segment and risk level
+    let floodRisk: 'none' | 'low' | 'medium' | 'high' | 'extreme';
+    
+    if (riskLevel === 'safe') {
+      floodRisk = i % 3 === 0 ? 'low' : 'none';
+    } else if (riskLevel === 'medium') {
+      floodRisk = i % 2 === 0 ? 'medium' : 'low';
+    } else {
+      // Dangerous route has progressively worse conditions
+      if (i <= numSegments / 3) floodRisk = 'medium';
+      else if (i <= (2 * numSegments) / 3) floodRisk = 'high';
+      else floodRisk = 'extreme';
+    }
+    
+    // Road types alternate between major roads and highways
+    const roadType: 'highway' | 'major' | 'local' | 'bridge' | 'tunnel' = 
+      i % 3 === 0 ? 'highway' : i % 2 === 0 ? 'major' : 'local';
+      
+    // Add the segment
+    segments.push({
+      startPoint: currentPoint,
+      endPoint: nextPoint,
+      distance: Math.round(segmentDistance),
+      duration: Math.round(segmentDistance / 50 * 3.6), // 50 km/h average speed
+      floodRisk,
+      roadType
+    });
+    
+    currentPoint = nextPoint;
+  }
   
   return segments;
 };
@@ -172,17 +217,39 @@ export const geocodeLocation = async (locationName: string): Promise<RoutePoint>
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 600));
   
-  // Generate some variation in coordinates based on the input string
+  // Common locations in Bangladesh
+  const knownLocations: Record<string, RoutePoint> = {
+    // Bangladesh city coordinates
+    'dhaka': { lat: 23.8103, lon: 90.4125, name: "Dhaka" },
+    'khulna': { lat: 22.8456, lon: 89.5403, name: "Khulna" },
+    'chittagong': { lat: 22.3569, lon: 91.7832, name: "Chittagong" },
+    'rajshahi': { lat: 24.3745, lon: 88.6042, name: "Rajshahi" },
+    'sylhet': { lat: 24.8949, lon: 91.8687, name: "Sylhet" },
+    'barisal': { lat: 22.7010, lon: 90.3535, name: "Barisal" },
+    'rangpur': { lat: 25.7439, lon: 89.2752, name: "Rangpur" },
+    'comilla': { lat: 23.4682, lon: 91.1792, name: "Comilla" },
+    'mymensingh': { lat: 24.7471, lon: 90.4203, name: "Mymensingh" }
+  };
+  
+  // Normalize input by converting to lowercase
+  const normalizedName = locationName.trim().toLowerCase();
+  
+  // Check if it's a known location
+  if (knownLocations[normalizedName]) {
+    return knownLocations[normalizedName];
+  }
+  
+  // If not a known location, generate one based on hash
   const hash = locationName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   
-  // Base coordinates (NYC area)
-  const baseLat = 40.7128;
-  const baseLon = -74.006;
+  // Base coordinates (roughly central Bangladesh)
+  const baseLat = 23.685;
+  const baseLon = 90.356;
   
   // Add some variation based on the string hash
   return {
-    lat: baseLat + (hash % 10) * 0.01,
-    lon: baseLon + (hash % 7) * 0.01,
+    lat: baseLat + (hash % 10) * 0.02, 
+    lon: baseLon + (hash % 7) * 0.02,
     name: locationName
   };
 };

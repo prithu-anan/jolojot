@@ -1,6 +1,5 @@
-
 import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import { Icon } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { findSafeRoutes, Route, RoutePoint, getSafetyLevel } from '@/utils/routeUtils';
@@ -34,18 +33,30 @@ const endIcon = new Icon({
   className: 'text-primary',
 });
 
-interface RouteMapProps {
-  selectedRouteId: string | null;
+// Change view component to update map when center changes
+interface ChangeMapViewProps {
+  center: [number, number];
+  zoom?: number;
 }
 
-const RouteMap: React.FC<RouteMapProps> = ({ selectedRouteId }) => {
+const ChangeMapView: React.FC<ChangeMapViewProps> = ({ center, zoom = 13 }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, zoom);
+  }, [center, zoom, map]);
+  return null;
+};
+
+interface RouteMapProps {
+  selectedRouteId: string | null;
+  userLocation?: { lat: number; lon: number } | null;
+}
+
+const RouteMap: React.FC<RouteMapProps> = ({ selectedRouteId, userLocation }) => {
   const [routes, setRoutes] = useState<Route[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Default center (NYC area)
-  const defaultCenter: [number, number] = [40.7128, -74.006];
-  
+
   // When the selectedRouteId changes, find the matching route
   useEffect(() => {
     if (selectedRouteId && routes.length > 0) {
@@ -56,15 +67,58 @@ const RouteMap: React.FC<RouteMapProps> = ({ selectedRouteId }) => {
     }
   }, [selectedRouteId, routes]);
 
+  // Calculate appropriate map center and zoom when a route is selected
+  const getMapSettings = (): { center: [number, number], zoom: number } => {
+    // If there's a selected route, center on the midpoint of the route
+    if (selectedRoute) {
+      // Calculate the midpoint between start and end locations
+      const midLat = (selectedRoute.startLocation.lat + selectedRoute.endLocation.lat) / 2;
+      const midLon = (selectedRoute.startLocation.lon + selectedRoute.endLocation.lon) / 2;
+      
+      // Calculate the distance between points to determine zoom level
+      const latDiff = Math.abs(selectedRoute.startLocation.lat - selectedRoute.endLocation.lat);
+      const lonDiff = Math.abs(selectedRoute.startLocation.lon - selectedRoute.endLocation.lon);
+      const maxDiff = Math.max(latDiff, lonDiff);
+      
+      // Determine appropriate zoom level based on distance
+      // Lower zoom number means more zoomed out
+      let zoom = 13; // default (city level)
+      
+      if (maxDiff > 0.5) zoom = 9;     // Major city to city route
+      else if (maxDiff > 0.1) zoom = 11; // Medium distance
+      
+      // For Dhaka-Khulna specific route
+      if ((selectedRoute.startLocation.name?.toLowerCase().includes('dhaka') && 
+           selectedRoute.endLocation.name?.toLowerCase().includes('khulna')) ||
+          (selectedRoute.startLocation.name?.toLowerCase().includes('khulna') && 
+           selectedRoute.endLocation.name?.toLowerCase().includes('dhaka'))) {
+        zoom = 8; // Zoom out further for this long route
+      }
+      
+      return { center: [midLat, midLon], zoom };
+    }
+    
+    // If user location is available, center on that
+    if (userLocation) {
+      return { center: [userLocation.lat, userLocation.lon], zoom: 13 };
+    }
+    
+    // Default center on Bangladesh
+    return { center: [23.685, 90.356], zoom: 7 }; 
+  };
+
+  // Get map settings
+  const mapSettings = getMapSettings();
+
   // Load initial dummy routes when component mounts
   useEffect(() => {
     const loadInitialRoutes = async () => {
       setIsLoading(true);
       try {
-        // Loading some dummy data (NYC area)
+        // Loading routes for Bangladesh cities instead of NYC
         const dummyRoutes = await findSafeRoutes(
-          { lat: 40.7128, lon: -74.006, name: 'New York City' },
-          { lat: 40.7645, lon: -73.9779, name: 'Manhattan' }
+          "Dhaka",
+          "Khulna"
         );
         setRoutes(dummyRoutes);
         
@@ -138,15 +192,38 @@ const RouteMap: React.FC<RouteMapProps> = ({ selectedRouteId }) => {
   return (
     <div className="h-full">
       <MapContainer
-        center={defaultCenter}
-        zoom={11}
+        center={mapSettings.center}
+        zoom={mapSettings.zoom}
         scrollWheelZoom={true}
         style={{ height: '100%', width: '100%' }}
       >
+        {/* This component updates map center when user location changes */}
+        <ChangeMapView center={mapSettings.center} zoom={mapSettings.zoom} />
+
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
+        
+        {/* Add a marker for the user's current location if available */}
+        {userLocation && (
+          <Marker
+            position={[userLocation.lat, userLocation.lon]}
+            icon={new Icon({
+              iconUrl: markerIcon,
+              iconSize: [25, 41],
+              iconAnchor: [12, 41],
+              popupAnchor: [1, -34],
+              className: 'text-blue-500'
+            })}
+          >
+            <Popup>
+              <div className="p-1">
+                <strong>Your Location</strong>
+              </div>
+            </Popup>
+          </Marker>
+        )}
         
         {/* Draw selected route */}
         {selectedRoute && (
