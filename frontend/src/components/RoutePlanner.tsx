@@ -14,7 +14,11 @@ import {
   getSafetyLevel 
 } from '@/utils/routeUtils';
 
-const RoutePlanner: React.FC = () => {
+interface RoutePlannerProps {
+  onRouteSelect?: (routeId: string) => void;
+}
+
+const RoutePlanner: React.FC<RoutePlannerProps> = ({ onRouteSelect }) => {
   const [startLocation, setStartLocation] = useState('');
   const [endLocation, setEndLocation] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -34,6 +38,11 @@ const RoutePlanner: React.FC = () => {
       const routeOptions = await findSafeRoutes(startLocation, endLocation);
       setRoutes(routeOptions);
       setSelectedRoute(null);
+      
+      // If there's a callback for route selection and we have routes, select the first one
+      if (onRouteSelect && routeOptions.length > 0) {
+        onRouteSelect(routeOptions[0].id);
+      }
     } catch (err) {
       console.error("Error finding routes:", err);
       setError("Unable to find routes. Please try different locations.");
@@ -44,6 +53,11 @@ const RoutePlanner: React.FC = () => {
 
   const handleSelectRoute = (route: Route) => {
     setSelectedRoute(route);
+    
+    // Notify parent component about route selection if callback exists
+    if (onRouteSelect) {
+      onRouteSelect(route.id);
+    }
   };
 
   const getSafetyColor = (safetyLevel: 'safe' | 'warning' | 'danger') => {
@@ -175,7 +189,8 @@ const RoutePlanner: React.FC = () => {
                 })}
               </div>
 
-              {selectedRoute && (
+              {/* If not on the map view, show the simple route visualization */}
+              {!onRouteSelect && selectedRoute && (
                 <div className="mt-6">
                   <div className="p-4 border rounded-lg bg-muted mb-4">
                     <h3 className="font-medium text-lg mb-2">Route Map</h3>

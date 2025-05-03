@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import NavBar from '@/components/NavBar';
 import WeatherMap from '@/components/WeatherMap';
@@ -111,7 +110,18 @@ export default function Index() {
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto">
               <h2 className="text-3xl font-bold text-center mb-6">Plan Your Safe Route</h2>
-              <RoutePlanner />
+              <div className="flex flex-col items-center space-y-4">
+                <p className="text-center text-lg text-muted-foreground mb-4">
+                  Use our route planning tool to find safe paths during extreme weather conditions.
+                </p>
+                <Button 
+                  size="lg" 
+                  onClick={() => navigate('/routes')}
+                  className="px-8"
+                >
+                  Open Route Planner
+                </Button>
+              </div>
             </div>
           </div>
         </section>

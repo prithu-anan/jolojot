@@ -1,4 +1,3 @@
-
 // This is a placeholder file for actual route planning functionality
 // In a real application, you would connect to mapping services like Google Maps, Mapbox, etc.
 
@@ -77,7 +76,11 @@ export const findSafeRoutes = async (
         {
           type: "flooding",
           description: "Moderate flooding reported on part of the route",
-          severity: "warning"
+          severity: "warning",
+          location: {
+            lat: startPoint.lat + (endPoint.lat - startPoint.lat) * 0.4,
+            lon: startPoint.lon + (endPoint.lon - startPoint.lon) * 0.4
+          }
         }
       ]
     },
@@ -94,12 +97,20 @@ export const findSafeRoutes = async (
         {
           type: "flooding",
           description: "Severe flooding reported on Lincoln Ave",
-          severity: "danger"
+          severity: "danger",
+          location: {
+            lat: startPoint.lat + (endPoint.lat - startPoint.lat) * 0.3,
+            lon: startPoint.lon + (endPoint.lon - startPoint.lon) * 0.3
+          }
         },
         {
           type: "closure",
           description: "Road closure at Broadway intersection",
-          severity: "danger"
+          severity: "danger",
+          location: {
+            lat: startPoint.lat + (endPoint.lat - startPoint.lat) * 0.7,
+            lon: startPoint.lon + (endPoint.lon - startPoint.lon) * 0.7
+          }
         }
       ]
     }

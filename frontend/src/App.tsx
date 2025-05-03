@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Forum from "./pages/Forum";
 import CreatePost from "./pages/CreatePost";
+import RoutePlanningPage from "./pages/RoutePlanningPage";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/forum" element={<Forum />} />
+            <Route path="/routes" element={<RoutePlanningPage />} />
             <Route
               path="/forum/create"
               element={
