@@ -13,6 +13,7 @@ import Forum from "./pages/Forum";
 import CreatePost from "./pages/CreatePost";
 import RoutePlanningPage from "./pages/RoutePlanningPage";
 import AuthorityDashboard from "./pages/AuthorityDashboard";
+import WaterLevelPredictor from "./pages/WaterLevelPredictor";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/forum" element={<Forum />} />
             <Route path="/routes" element={<RoutePlanningPage />} />
+            <Route path="/predict" element={<WaterLevelPredictor />} />
             <Route
               path="/forum/create"
               element={

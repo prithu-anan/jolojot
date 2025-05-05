@@ -1,7 +1,7 @@
-
-import React from 'react';
-import { CloudRain, Umbrella, Menu } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import { CloudRain, Umbrella, Menu } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const NavBar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -13,26 +13,30 @@ const NavBar: React.FC = () => {
           <CloudRain className="h-6 w-6 text-primary" />
           <span className="text-xl font-bold">জলজট</span>
         </div>
-        
+
+        {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-6">
           <nav>
             <ul className="flex space-x-6">
-              <li><a href="#" className="font-medium hover:text-primary">Home</a></li>
-              <li><a href="#" className="font-medium hover:text-primary">Map</a></li>
-              <li><a href="#" className="font-medium hover:text-primary">Route Planner</a></li>
-              <li><a href="#" className="font-medium hover:text-primary">Safety Tips</a></li>
+              <li><Link to="/" className="font-medium hover:text-primary">Home</Link></li>
+              <li><Link to="/map" className="font-medium hover:text-primary">Map</Link></li>
+              <li><Link to="/routes" className="font-medium hover:text-primary">Route Planner</Link></li>
+              <li><Link to="/safety" className="font-medium hover:text-primary">Safety Tips</Link></li>
             </ul>
           </nav>
-          <Button className="bg-primary hover:bg-primary/90 flex items-center gap-1">
-            <Umbrella className="mr-1 h-4 w-4" />
-            Check Your Route
-          </Button>
+          <Link to="/predict">
+            <Button className="bg-primary hover:bg-primary/90 flex items-center gap-1">
+              <Umbrella className="mr-1 h-4 w-4" />
+              Predict Water-Level
+            </Button>
+          </Link>
         </div>
-        
+
+        {/* Mobile Menu Button */}
         <div className="md:hidden">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label="Menu"
           >
@@ -40,22 +44,25 @@ const NavBar: React.FC = () => {
           </Button>
         </div>
       </div>
-      
+
+      {/* Mobile Navigation */}
       {isMenuOpen && (
         <div className="md:hidden container py-4 border-t bg-background">
           <nav>
             <ul className="flex flex-col space-y-4">
-              <li><a href="#" className="block font-medium hover:text-primary">Home</a></li>
-              <li><a href="#" className="block font-medium hover:text-primary">Map</a></li>
-              <li><a href="#" className="block font-medium hover:text-primary">Route Planner</a></li>
-              <li><a href="#" className="block font-medium hover:text-primary">Safety Tips</a></li>
+              <li><Link to="/" className="block font-medium hover:text-primary">Home</Link></li>
+              <li><Link to="/map" className="block font-medium hover:text-primary">Map</Link></li>
+              <li><Link to="/routes" className="block font-medium hover:text-primary">Route Planner</Link></li>
+              <li><Link to="/safety" className="block font-medium hover:text-primary">Safety Tips</Link></li>
             </ul>
           </nav>
           <div className="mt-4">
-            <Button className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center gap-1">
-              <Umbrella className="mr-1 h-4 w-4" />
-              Check Your Route
-            </Button>
+            <Link to="/predict">
+              <Button className="w-full bg-primary hover:bg-primary/90 flex items-center justify-center gap-1">
+                <Umbrella className="mr-1 h-4 w-4" />
+                Predict Water-Level
+              </Button>
+            </Link>
           </div>
         </div>
       )}
