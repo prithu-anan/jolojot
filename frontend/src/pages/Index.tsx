@@ -10,6 +10,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/sonner";
+import { CloudRain } from 'lucide-react';
 
 export default function Index() {
   const { user, loading } = useAuth();
@@ -56,7 +57,10 @@ export default function Index() {
     <div className="flex flex-col min-h-screen">
       <header className="bg-background border-b border-border">
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Rain Route Refuge</h1>
+        <div className="flex items-center gap-2">
+          <CloudRain className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold">জলজট</h1>
+        </div>
           <nav className="flex gap-4 items-center">
             <Link to="/forum" className="hover:text-primary transition-colors">
               Forum

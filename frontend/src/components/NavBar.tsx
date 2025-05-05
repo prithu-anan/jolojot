@@ -11,7 +11,7 @@ const NavBar: React.FC = () => {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
           <CloudRain className="h-6 w-6 text-primary" />
-          <span className="text-xl font-bold">RainRoute</span>
+          <span className="text-xl font-bold">জলজট</span>
         </div>
         
         <div className="hidden md:flex items-center space-x-6">

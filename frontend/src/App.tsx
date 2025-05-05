@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import Forum from "./pages/Forum";
 import CreatePost from "./pages/CreatePost";
 import RoutePlanningPage from "./pages/RoutePlanningPage";
+import AuthorityDashboard from "./pages/AuthorityDashboard";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,8 @@ const App = () => (
                 </RequireAuth>
               }
             />
+            <Route path="/authority" element={<AuthorityDashboard />} />
+
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
