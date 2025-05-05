@@ -64,6 +64,36 @@ const stationFeedback: Record<number, { user: string; comment: string }[]> = {
   ],
 };
 
+const stationDetails: Record<number, {
+  elevation: string;
+  landCover: string;
+  drainage: string;
+  slope: string;
+  proximity: string;
+}> = {
+  1: {
+    elevation: "11.2m",
+    landCover: "Urban/Impervious",
+    drainage: "Low",
+    slope: "1.8%",
+    proximity: "400m to Dhanmondi Lake",
+  },
+  2: {
+    elevation: "9.6m",
+    landCover: "Mixed Residential",
+    drainage: "Moderate",
+    slope: "2.5%",
+    proximity: "700m to Buriganga River",
+  },
+  3: {
+    elevation: "10.4m",
+    landCover: "Vegetation/Suburban",
+    drainage: "High",
+    slope: "3.2%",
+    proximity: "120m to Canal X",
+  },
+};
+
 const AuthorityDashboard: React.FC = () => {
   const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -195,21 +225,23 @@ const AuthorityDashboard: React.FC = () => {
               <CardContent>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">Time Range:</span>
-                    <select
-											aria-label="Time Range"
-											value={selectedHours}
-											onChange={(e) => setSelectedHours(parseInt(e.target.value))}
-											className="border rounded px-2 py-1 text-sm"
-                    >
-											{[1, 2, 3, 4, 5, 6].map((h) => (
-												<option key={h} value={h}>
-													Last {h} hour{h > 1 && "s"}
-												</option>
-											))}
-                    </select>
+                  <select
+                    aria-label="Time Range"
+                    value={selectedHours}
+                    onChange={(e) => setSelectedHours(parseInt(e.target.value))}
+                    className="border rounded px-2 py-1 text-sm"
+                  >
+                    {[1, 2, 3, 4, 5, 6].map((h) => (
+                      <option key={h} value={h}>
+                        Last {h} hour{h > 1 && "s"}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Graph Cards */}
             {["waterlogging", "rainfall", "riskfactor"].map((metric, i) => (
               <Card key={metric}>
                 <CardHeader>
@@ -231,6 +263,25 @@ const AuthorityDashboard: React.FC = () => {
                 </CardContent>
               </Card>
             ))}
+
+            {/* Station Details */}
+            {selectedStationId && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Station Geospatial Details</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 text-sm text-muted-foreground">
+                  {Object.entries(stationDetails[selectedStationId] ?? {}).map(([key, value]) => (
+                    <div key={key}>
+                      <span className="font-medium capitalize">
+                        {key.replace(/([a-z])([A-Z])/g, "$1 $2")}:{" "}
+                      </span>
+                      <span>{value}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
