@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -5,22 +6,13 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
-import { TagInput } from "@/components/ui/tag-input";
-import type { PostgrestError } from "@supabase/supabase-js";
 
 export default function CreatePostForm() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [location, setLocation] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
   const [images, setImages] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
@@ -57,31 +49,6 @@ export default function CreatePostForm() {
 
       if (postError) throw postError;
 
-      // Add tags if any exist
-      if (tags.length > 0) {
-        // Call the create_tags_if_not_exist function using RPC
-        const { data: tagIds, error: tagError } = await supabase.rpc(
-          "create_tags_if_not_exist",
-          { tag_names: tags }
-        );
-
-        if (tagError) throw tagError;
-
-        // Link tags to post
-        if (tagIds && tagIds.length > 0) {
-          const postTagsData = tagIds.map((tagId) => ({
-            post_id: postData.id,
-            tag_id: tagId,
-          }));
-
-          const { error: linkError } = await supabase
-            .from("post_tags")
-            .insert(postTagsData);
-
-          if (linkError) throw linkError;
-        }
-      }
-
       // Then upload any images if they exist
       if (images.length > 0) {
         for (const image of images) {
@@ -102,7 +69,7 @@ export default function CreatePostForm() {
             .from("post_images")
             .insert({
               post_id: postData.id,
-              image_url: urlData.publicUrl,
+              image_url: urlData.publicUrl
             });
 
           if (imageRefError) throw imageRefError;
@@ -111,7 +78,7 @@ export default function CreatePostForm() {
 
       toast.success("Post created successfully!");
       navigate("/forum");
-    } catch (error: PostgrestError | Error) {
+    } catch (error: any) {
       toast.error(error.message || "Error creating post");
       console.error("Error creating post:", error);
     } finally {
@@ -136,7 +103,7 @@ export default function CreatePostForm() {
               required
             />
           </div>
-
+          
           <div className="space-y-2">
             <Label htmlFor="location">Location</Label>
             <Input
@@ -147,20 +114,7 @@ export default function CreatePostForm() {
               required
             />
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="tags">Tags</Label>
-            <TagInput
-              value={tags}
-              onChange={setTags}
-              placeholder="Add tags (e.g., rain, flooding, snow)..."
-              maxTags={5}
-            />
-            <p className="text-xs text-muted-foreground">
-              Press Enter or Space to add a tag (max 5)
-            </p>
-          </div>
-
+          
           <div className="space-y-2">
             <Label htmlFor="content">Content</Label>
             <textarea
@@ -172,7 +126,7 @@ export default function CreatePostForm() {
               required
             />
           </div>
-
+          
           <div className="space-y-2">
             <Label htmlFor="images">Images (Optional)</Label>
             <Input
@@ -187,11 +141,11 @@ export default function CreatePostForm() {
               Upload images of the location conditions
             </p>
           </div>
-
+          
           <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
+            <Button 
+              type="button" 
+              variant="outline" 
               onClick={() => navigate("/forum")}
             >
               Cancel

@@ -4,23 +4,6 @@
 
 **URL**: https://lovable.dev/projects/8e820450-f9a3-41ff-a689-d55f60b1c9d7
 
-## Features
-
-### AI-powered Route Planning
-
-This project includes an AI-powered route planning system that:
-
-- Dynamically generates route options based on start and end locations
-- Provides realistic hazard information for routes in Bangladesh
-- Includes detailed safety information and recommendations
-- Falls back to deterministic routes when AI service is unavailable
-
-To enable the AI feature, you need to:
-
-1. Get an OpenAI API key from [OpenAI Platform](https://platform.openai.com/)
-2. Create a `.env` file based on `.env.example`
-3. Add your OpenAI API key as `VITE_OPENAI_API_KEY`
-
 ## How can I edit this code?
 
 There are several ways of editing your application.
