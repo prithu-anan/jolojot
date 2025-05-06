@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -6,13 +5,21 @@ import PostCard, { PostWithImages } from "./PostCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, RefreshCw } from "lucide-react";
+import { Plus, Search, RefreshCw, X, Tag } from "lucide-react";
 import { toast } from "@/components/ui/sonner";
+import { Badge } from "@/components/ui/badge";
+
+type TagType = {
+  id: string;
+  name: string;
+};
 
 export default function PostList() {
   const [posts, setPosts] = useState<PostWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<TagType[]>([]);
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -20,23 +27,39 @@ export default function PostList() {
     setLoading(true);
     try {
       // Fetch all posts
-      let { data: posts, error } = await supabase
+      const { data: posts, error } = await supabase
         .from("forum_posts")
         .select("*")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      if (!posts) posts = [];
+      if (!posts) return setPosts([]);
 
-      // Fetch images for each post
-      const postsWithImages = await Promise.all(
+      // Fetch tags for each post and images
+      const postsWithImagesAndTags = await Promise.all(
         posts.map(async (post) => {
+          // Fetch images for the post
           const { data: images, error: imgError } = await supabase
             .from("post_images")
             .select("id, image_url")
             .eq("post_id", post.id);
 
           if (imgError) console.error("Error fetching images:", imgError);
+
+          // Fetch tags for the post using a custom query
+          const { data: postTags, error: tagsError } = await supabase
+            .from("post_tags")
+            .select(
+              `
+              tag:tags(id, name)
+            `
+            )
+            .eq("post_id", post.id);
+
+          if (tagsError) console.error("Error fetching tags:", tagsError);
+
+          // Transform tags into the expected format
+          const tags = postTags?.map((item) => item.tag) || [];
 
           // If user is logged in, check their vote on this post
           let userVote = null;
@@ -57,32 +80,95 @@ export default function PostList() {
           return {
             ...post,
             images: images || [],
-            user_vote: userVote
+            tags: tags as TagType[],
+            user_vote: userVote,
           };
         })
       );
 
-      setPosts(postsWithImages);
-    } catch (error: any) {
-      toast.error(error.message || "Error fetching posts");
+      setPosts(postsWithImagesAndTags);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Error fetching posts";
+      toast.error(errorMessage);
       console.error("Error fetching posts:", error);
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchTags = async () => {
+    try {
+      // Get all tags that are actually used in posts
+      const { data, error } = await supabase.from("post_tags").select(`
+          tag:tags(id, name),
+          post_id
+        `);
+
+      if (error) throw error;
+
+      // Count occurrences and sort by frequency
+      const tagCounts = new Map<
+        string,
+        { id: string; name: string; count: number }
+      >();
+
+      data?.forEach((item) => {
+        const tag = item.tag as TagType;
+        if (!tag) return;
+
+        const existingTag = tagCounts.get(tag.id);
+        if (existingTag) {
+          existingTag.count += 1;
+        } else {
+          tagCounts.set(tag.id, {
+            id: tag.id,
+            name: tag.name,
+            count: 1,
+          });
+        }
+      });
+
+      // Convert to array and sort
+      const sortedTags = Array.from(tagCounts.values())
+        .sort((a, b) => b.count - a.count)
+        .map(({ id, name }) => ({ id, name }));
+
+      setAvailableTags(sortedTags);
+    } catch (error: unknown) {
+      console.error("Error fetching tags:", error);
+    }
+  };
+
   useEffect(() => {
     fetchPosts();
+    fetchTags();
   }, [user]);
 
-  const filteredPosts = posts.filter(post => {
-    if (!searchTerm) return true;
-    const search = searchTerm.toLowerCase();
-    return (
-      post.title.toLowerCase().includes(search) || 
-      post.content.toLowerCase().includes(search) ||
-      post.location.toLowerCase().includes(search)
-    );
+  const handleTagSelect = (tagName: string) => {
+    if (selectedTags.includes(tagName)) {
+      setSelectedTags(selectedTags.filter((t) => t !== tagName));
+    } else {
+      setSelectedTags([...selectedTags, tagName]);
+    }
+  };
+
+  const filteredPosts = posts.filter((post) => {
+    // Filter by search term
+    const searchMatch =
+      !searchTerm ||
+      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.location.toLowerCase().includes(searchTerm.toLowerCase());
+
+    // Filter by selected tags
+    const tagMatch =
+      selectedTags.length === 0 ||
+      selectedTags.every((tag) =>
+        post.tags?.some((postTag) => postTag.name === tag)
+      );
+
+    return searchMatch && tagMatch;
   });
 
   return (
@@ -97,12 +183,15 @@ export default function PostList() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
+
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="icon"
-            onClick={fetchPosts}
+            onClick={() => {
+              fetchPosts();
+              fetchTags();
+            }}
             title="Refresh posts"
           >
             <RefreshCw size={18} />
@@ -113,6 +202,39 @@ export default function PostList() {
         </div>
       </div>
 
+      {availableTags.length > 0 && (
+        <div className="flex items-center flex-wrap gap-2">
+          <div className="flex items-center">
+            <Tag size={16} className="mr-1 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground mr-2">
+              Filter by tags:
+            </span>
+          </div>
+
+          {selectedTags.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setSelectedTags([])}
+            >
+              <X size={14} className="mr-1" /> Clear
+            </Button>
+          )}
+
+          {availableTags.map((tag) => (
+            <Badge
+              key={tag.id}
+              variant={selectedTags.includes(tag.name) ? "default" : "outline"}
+              className="cursor-pointer"
+              onClick={() => handleTagSelect(tag.name)}
+            >
+              {tag.name}
+            </Badge>
+          ))}
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-10">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -121,19 +243,29 @@ export default function PostList() {
       ) : filteredPosts.length > 0 ? (
         <div>
           {filteredPosts.map((post) => (
-            <PostCard 
-              key={post.id} 
-              post={post} 
-              onVoteChange={fetchPosts} 
+            <PostCard
+              key={post.id}
+              post={post}
+              onVoteChange={fetchPosts}
+              onTagClick={handleTagSelect}
             />
           ))}
         </div>
-      ) : searchTerm ? (
+      ) : searchTerm || selectedTags.length > 0 ? (
         <div className="text-center py-10">
-          <p>No posts match your search.</p>
-          <Button variant="outline" className="mt-2" onClick={() => setSearchTerm("")}>
-            Clear Search
-          </Button>
+          <p>No posts match your search criteria.</p>
+          <div className="flex justify-center mt-2 gap-2">
+            {searchTerm && (
+              <Button variant="outline" onClick={() => setSearchTerm("")}>
+                Clear Search
+              </Button>
+            )}
+            {selectedTags.length > 0 && (
+              <Button variant="outline" onClick={() => setSelectedTags([])}>
+                Clear Tag Filters
+              </Button>
+            )}
+          </div>
         </div>
       ) : (
         <div className="text-center py-10">
