@@ -1,0 +1,1280 @@
+Directory structure:
+└── db/
+    ├── __init__.py
+    ├── auth_db.py
+    ├── authority_db.py
+    ├── database.py
+    ├── forum_db.py
+    ├── model_db.py
+    ├── route_db.py
+    └── weather_db.py
+
+================================================
+File: __init__.py
+================================================
+from .database import Database
+
+# Create a global instance of the database
+db = Database()
+
+# Prevent circular imports by deferring module loading
+def initialize_modules():
+    from . import model_db
+    from . import weather_db
+    from . import route_db
+    from . import forum_db
+    from . import auth_db
+    from . import authority_db
+
+# Call this function to initialize the modules after db is created
+initialize_modules()
+
+
+================================================
+File: auth_db.py
+================================================
+# Authentication data module
+from . import db
+import uuid
+from datetime import datetime
+
+# Define namespaces
+USERS = 'auth_users'
+TOKENS = 'auth_tokens'
+
+# Initialize users
+def init_users():
+    return {
+        'user@example.com': {
+            'id': 'user-1',
+            'email': 'user@example.com',
+            'password': 'password123',
+            'created_at': '2023-01-01T00:00:00Z'
+        }
+    }
+
+# Initialize tokens
+def init_tokens():
+    return {}
+
+# Register with the database
+db.register(USERS, init_users)
+db.register(TOKENS, init_tokens)
+
+# Initialize data
+db.initialize(USERS, init_users)
+db.initialize(TOKENS, init_tokens)
+
+# Authentication functions
+def signup(email, password):
+    """Register a new user"""
+    users = db.get(USERS)
+    
+    if email in users:
+        return None
+    
+    user_id = f"user-{len(users) + 1}"
+    created_at = datetime.utcnow().isoformat() + 'Z'
+    
+    # Create new user
+    users[email] = {
+        'id': user_id,
+        'email': email,
+        'password': password,  # In a real app, this would be hashed
+        'created_at': created_at
+    }
+    
+    # Update database
+    db.initialize(USERS, lambda: users)
+    
+    return {
+        'id': user_id,
+        'email': email,
+        'created_at': created_at
+    }
+
+def signin(email, password):
+    """Sign in an existing user"""
+    users = db.get(USERS)
+    tokens = db.get(TOKENS)
+    
+    user = users.get(email)
+    if not user or user['password'] != password:
+        return None
+    
+    # Generate token
+    token = f"token-{uuid.uuid4()}"
+    tokens[token] = user['id']
+    
+    # Update database
+    db.initialize(TOKENS, lambda: tokens)
+    
+    return {
+        'user': {
+            'id': user['id'],
+            'email': user['email']
+        },
+        'token': token
+    }
+
+def get_user_by_token(token):
+    """Get a user by their authentication token"""
+    tokens = db.get(TOKENS)
+    users = db.get(USERS)
+    
+    user_id = tokens.get(token)
+    if not user_id:
+        return None
+    
+    # Find user by ID
+    for email, user in users.items():
+        if user['id'] == user_id:
+            return {
+                'id': user['id'],
+                'email': user['email']
+            }
+    
+    return None
+
+
+================================================
+File: authority_db.py
+================================================
+# Authority dashboard data module
+from . import db
+import random
+import math
+from datetime import datetime
+
+# Define namespaces
+STATIONS = 'authority_stations'
+STATION_FEEDBACK = 'station_feedback'
+
+# Initialize stations
+def init_stations():
+    return [
+        {
+            'id': 1,
+            'name': 'Station A',
+            'lat': 23.8103,
+            'lon': 90.4125,
+            'details': {
+                'elevation': '11.2m',
+                'landCover': 'Urban/Impervious',
+                'drainage': 'Low',
+                'slope': '1.8%',
+                'proximity': '400m to Dhanmondi Lake'
+            }
+        },
+        {
+            'id': 2,
+            'name': 'Station B',
+            'lat': 23.7000,
+            'lon': 90.3750,
+            'details': {
+                'elevation': '9.6m',
+                'landCover': 'Mixed Residential',
+                'drainage': 'Moderate',
+                'slope': '2.5%',
+                'proximity': '700m to Buriganga River'
+            }
+        },
+        {
+            'id': 3,
+            'name': 'Station C',
+            'lat': 23.7800,
+            'lon': 90.4200,
+            'details': {
+                'elevation': '10.4m',
+                'landCover': 'Vegetation/Suburban',
+                'drainage': 'High',
+                'slope': '3.2%',
+                'proximity': '120m to Canal X'
+            }
+        }
+    ]
+
+# Initialize station feedback
+def init_station_feedback():
+    return {
+        1: [
+            {'user': 'Hasan', 'comment': 'Water levels rise quickly here after heavy rain.'},
+            {'user': 'Farzana', 'comment': 'Drainage improvements are working recently.'}
+        ],
+        2: [
+            {'user': 'Tariq', 'comment': 'Area remains flooded during monsoon.'},
+            {'user': 'Mitu', 'comment': 'A key intersection affected by waterlogging.'}
+        ],
+        3: [
+            {'user': 'Rayhan', 'comment': 'No major issue unless there\'s a storm.'}
+        ]
+    }
+
+# Register with the database
+db.register(STATIONS, init_stations)
+db.register(STATION_FEEDBACK, init_station_feedback)
+
+# Initialize data
+db.initialize(STATIONS, init_stations)
+db.initialize(STATION_FEEDBACK, init_station_feedback)
+
+# Helper functions
+def generate_timestamps(hours=6):
+    """Generate timestamps for half-hour intervals"""
+    return [f"{(6 + h // 2):02d}:{(h % 2) * 30:02d}" for h in range(hours * 2)]
+
+def generate_station_data(station_id, hours=3):
+    """Generate station data for monitoring"""
+    timestamps = generate_timestamps(hours)
+    data = []
+    
+    # Base values that vary by station
+    base_waterlogging = 0.8 + station_id * 0.2
+    base_rainfall = 5 + station_id * 2
+    base_riskfactor = 1.0 + station_id * 0.2
+    
+    for i, timestamp in enumerate(timestamps):
+        # Add some variation over time
+        variation = (i / len(timestamps)) * random.uniform(0.8, 1.2)
+        
+        data.append({
+            'timestamp': timestamp,
+            'waterlogging': round(base_waterlogging + math.sin(i / 2) * 0.3 * variation, 1),
+            'rainfall': round(base_rainfall + math.cos(i / 3) * 2 * variation, 1),
+            'riskfactor': round(base_riskfactor + math.sin(i / 3) * 0.5 * variation, 1)
+        })
+    
+    return data
+
+# Authority dashboard functions
+def get_stations():
+    """Get all monitoring stations"""
+    return db.get(STATIONS)
+
+def get_station(station_id):
+    """Get a specific station by ID"""
+    stations = db.get(STATIONS)
+    return next((s for s in stations if s['id'] == station_id), None)
+
+def update_station_location(station_id, lat, lon):
+    """Update the location of a station"""
+    stations = db.get(STATIONS)
+    station = next((s for s in stations if s['id'] == station_id), None)
+    
+    if not station:
+        return None
+    
+    # Update the location
+    station['lat'] = lat
+    station['lon'] = lon
+    
+    # Update the database
+    db.initialize(STATIONS, lambda: stations)
+    
+    return station
+
+def get_station_data(station_id, hours=3):
+    """Get monitoring data for a station"""
+    station = get_station(station_id)
+    if not station:
+        return None
+    
+    # Generate data for the requested hours
+    data = generate_station_data(station_id, hours)
+    
+    # Get feedback for this station
+    feedback = db.get(STATION_FEEDBACK, station_id) or []
+    
+    return {
+        'station': station,
+        'data': data,
+        'feedback': feedback
+    }
+
+
+================================================
+File: database.py
+================================================
+class Database:
+    """
+    Main database interface that simulates a real database
+    but actually just serves static data with the ability to update it in memory.
+    """
+    def __init__(self):
+        self._data = {}
+        self._registries = {}
+    
+    def register(self, namespace, registry):
+        """Register a data registry for a specific namespace"""
+        self._registries[namespace] = registry
+        if namespace not in self._data:
+            self._data[namespace] = {}
+    
+    def get(self, namespace, key=None, filter_func=None):
+        """
+        Get data from the database
+        
+        Args:
+            namespace: The data namespace
+            key: Optional key to get specific data
+            filter_func: Optional filter function
+            
+        Returns:
+            The requested data
+        """
+        if namespace not in self._data:
+            return None
+            
+        if key is not None:
+            return self._data[namespace].get(key)
+            
+        if filter_func is not None:
+            # This simulates a database query with a filter
+            if isinstance(self._data[namespace], dict):
+                return {k: v for k, v in self._data[namespace].items() 
+                        if filter_func(v)}
+            elif isinstance(self._data[namespace], list):
+                return [item for item in self._data[namespace] 
+                        if filter_func(item)]
+                        
+        return self._data[namespace]
+    
+    def set(self, namespace, key, value):
+        """
+        Set data in the database
+        
+        Args:
+            namespace: The data namespace
+            key: The data key
+            value: The data value to set
+        """
+        if namespace not in self._data:
+            self._data[namespace] = {}
+            
+        self._data[namespace][key] = value
+        return value
+    
+    def update(self, namespace, key, value):
+        """
+        Update existing data in the database
+        
+        Args:
+            namespace: The data namespace
+            key: The data key
+            value: The value to update with
+        """
+        if namespace not in self._data or key not in self._data[namespace]:
+            return None
+            
+        if isinstance(self._data[namespace][key], dict) and isinstance(value, dict):
+            self._data[namespace][key].update(value)
+            return self._data[namespace][key]
+        else:
+            return self.set(namespace, key, value)
+    
+    def delete(self, namespace, key):
+        """
+        Delete data from the database
+        
+        Args:
+            namespace: The data namespace
+            key: The data key to delete
+        """
+        if namespace in self._data and key in self._data[namespace]:
+            deleted = self._data[namespace][key]
+            del self._data[namespace][key]
+            return deleted
+        return None
+    
+    def add_to_list(self, namespace, item, id_key='id'):
+        """
+        Add an item to a list namespace
+        
+        Args:
+            namespace: The data namespace (must be a list)
+            item: The item to add
+            id_key: The key to use as ID
+            
+        Returns:
+            The added item
+        """
+        if namespace not in self._data:
+            self._data[namespace] = []
+            
+        if not isinstance(self._data[namespace], list):
+            self._data[namespace] = []
+            
+        self._data[namespace].append(item)
+        return item
+    
+    def initialize(self, namespace, init_func):
+        """
+        Initialize a namespace with data if it doesn't exist
+        
+        Args:
+            namespace: The data namespace
+            init_func: Function that returns initial data
+        """
+        if namespace not in self._data or not self._data[namespace]:
+            self._data[namespace] = init_func()
+        return self._data[namespace]
+
+
+================================================
+File: forum_db.py
+================================================
+# Forum data module
+from . import db
+import random
+from datetime import datetime, timedelta
+import uuid
+
+# Define namespaces
+POSTS = 'posts'
+POST_IMAGES = 'post_images'
+USER_VOTES = 'user_votes'
+USERS = 'users'
+
+# Sample users
+def init_users():
+    return {
+        'user-1': {"id": "user-1", "email": "hasan@example.com", "password": "password123"},
+        'user-2': {"id": "user-2", "email": "farzana@example.com", "password": "password123"},
+        'user-3': {"id": "user-3", "email": "tariq@example.com", "password": "password123"},
+        'user-4': {"id": "user-4", "email": "mitu@example.com", "password": "password123"},
+        'user-5': {"id": "user-5", "email": "rayhan@example.com", "password": "password123"}
+    }
+
+# Sample locations
+SAMPLE_LOCATIONS = [
+    "Mirpur, Dhaka",
+    "Dhanmondi, Dhaka",
+    "Gulshan, Dhaka",
+    "Khulna City",
+    "Chittagong Port Area",
+    "Sylhet City"
+]
+
+# Sample post titles and content templates
+SAMPLE_TITLES = [
+    "waterlogging in {location}",
+    "Water levels rising in {location}",
+    "Road conditions in {location}",
+    "Heavy rain impact in {location}",
+    "Drainage issues in {location}"
+]
+
+SAMPLE_CONTENTS = [
+    "There is significant waterlogging in {location}. Water level is approximately {depth}m deep. Be careful when traveling through this area.",
+    "Water levels are rising quickly in {location} due to continuous rain. Main roads have {depth}m of water.",
+    "Current road conditions in {location} are challenging. Several areas have {depth}m deep water pools. Alternative routes recommended.",
+    "Heavy rain has impacted {location} significantly. Streets are flooded with {depth}m of water in some areas.",
+    "Drainage systems in {location} are overwhelmed. Water accumulation of {depth}m reported in low-lying areas."
+]
+
+# Initialize dummy data
+def init_posts():
+    users = list(init_users().values())
+    posts = []
+    
+    for i in range(10):
+        post_id = f"post-{i+1}"
+        user = random.choice(users)
+        location = random.choice(SAMPLE_LOCATIONS)
+        title_template = random.choice(SAMPLE_TITLES)
+        content_template = random.choice(SAMPLE_CONTENTS)
+        
+        # Random water depth between 0.1 and 1.0 meters
+        depth = round(random.uniform(0.1, 1.0), 1)
+        
+        # Format title and content
+        title = title_template.format(location=location)
+        content = content_template.format(location=location, depth=depth)
+        
+        # Random timestamp within the last 3 days
+        created_at = (datetime.utcnow() - timedelta(days=random.uniform(0, 3))).isoformat() + 'Z'
+        
+        # Random votes
+        upvotes = random.randint(0, 20)
+        downvotes = random.randint(0, 5)
+        
+        post = {
+            "id": post_id,
+            "title": title,
+            "content": content,
+            "location": location,
+            "created_at": created_at,
+            "updated_at": created_at,
+            "user_id": user["id"],
+            "upvotes": upvotes,
+            "downvotes": downvotes
+        }
+        
+        posts.append(post)
+    
+    return posts
+
+def init_post_images():
+    images = {}
+    posts = init_posts()
+    
+    for post in posts:
+        if random.random() > 0.5:
+            post_images = []
+            num_images = random.randint(1, 3)
+            
+            for i in range(num_images):
+                image_id = f"img-{uuid.uuid4()}"
+                image_url = f"https://example.com/images/waterlogging{random.randint(1, 10)}.jpg"
+                
+                post_images.append({
+                    "id": image_id,
+                    "image_url": image_url
+                })
+                
+            images[post['id']] = post_images
+    
+    return images
+
+def init_user_votes():
+    return {}
+
+# Register with the database
+db.register(POSTS, init_posts)
+db.register(POST_IMAGES, init_post_images)
+db.register(USER_VOTES, init_user_votes)
+db.register(USERS, init_users)
+
+# Initialize data
+db.initialize(POSTS, init_posts)
+db.initialize(POST_IMAGES, init_post_images)
+db.initialize(USER_VOTES, init_user_votes)
+db.initialize(USERS, init_users)
+
+# Forum functions
+def get_posts(location=None, limit=10, offset=0, user_id=None):
+    """Get forum posts with optional filtering"""
+    posts = db.get(POSTS)
+    
+    # Filter by location if provided
+    if location:
+        filtered_posts = [p for p in posts if location.lower() in p['location'].lower()]
+    else:
+        filtered_posts = posts
+    
+    # Apply pagination
+    paginated_posts = filtered_posts[offset:offset+limit]
+    
+    # Add images to posts
+    post_images = db.get(POST_IMAGES)
+    user_votes = db.get(USER_VOTES)
+    
+    result_posts = []
+    for post in paginated_posts:
+        post_copy = post.copy()
+        post_copy['images'] = post_images.get(post['id'], [])
+        
+        # Add user_vote if user_id is provided
+        if user_id:
+            vote_key = f"{user_id}:{post['id']}"
+            post_copy['user_vote'] = user_votes.get(vote_key)
+        else:
+            post_copy['user_vote'] = None
+            
+        result_posts.append(post_copy)
+    
+    return {
+        'posts': result_posts,
+        'total': len(filtered_posts)
+    }
+
+def create_post(title, content, location, user_id):
+    """Create a new forum post"""
+    posts = db.get(POSTS)
+    post_id = f"post-{len(posts) + 1}"
+    created_at = datetime.utcnow().isoformat() + 'Z'
+    
+    new_post = {
+        "id": post_id,
+        "title": title,
+        "content": content,
+        "location": location,
+        "created_at": created_at,
+        "updated_at": created_at,
+        "user_id": user_id,
+        "upvotes": 0,
+        "downvotes": 0
+    }
+    
+    posts.append(new_post)
+    db.initialize(POSTS, lambda: posts)
+    
+    return new_post
+
+def upload_image(post_id):
+    """Upload an image to a post"""
+    # In a real implementation, we would handle file upload
+    # For our mock API, we'll just generate a dummy image
+    
+    image_id = f"img-{uuid.uuid4()}"
+    image_url = f"https://example.com/images/waterlogging{random.randint(1, 10)}.jpg"
+    
+    image = {
+        "id": image_id,
+        "post_id": post_id,
+        "image_url": image_url,
+        "created_at": datetime.utcnow().isoformat() + 'Z'
+    }
+    
+    post_images = db.get(POST_IMAGES)
+    if post_id not in post_images:
+        post_images[post_id] = []
+    post_images[post_id].append(image)
+    
+    db.initialize(POST_IMAGES, lambda: post_images)
+    
+    return image
+
+def vote_on_post(post_id, user_id, vote_type):
+    """Record a user vote on a post"""
+    posts = db.get(POSTS)
+    user_votes = db.get(USER_VOTES)
+    
+    # Find the post
+    post = next((p for p in posts if p['id'] == post_id), None)
+    if not post:
+        return None
+    
+    # Check if user has already voted
+    vote_key = f"{user_id}:{post_id}"
+    existing_vote = user_votes.get(vote_key)
+    
+    if existing_vote == vote_type:
+        # Remove the vote
+        if vote_key in user_votes:
+            del user_votes[vote_key]
+        post[f"{vote_type}s"] = max(0, post[f"{vote_type}s"] - 1)
+        user_vote = None
+    elif existing_vote:
+        # Change vote type
+        user_votes[vote_key] = vote_type
+        post[f"{existing_vote}s"] = max(0, post[f"{existing_vote}s"] - 1)
+        post[f"{vote_type}s"] += 1
+        user_vote = vote_type
+    else:
+        # New vote
+        user_votes[vote_key] = vote_type
+        post[f"{vote_type}s"] += 1
+        user_vote = vote_type
+    
+    # Update the database
+    db.initialize(POSTS, lambda: posts)
+    db.initialize(USER_VOTES, lambda: user_votes)
+    
+    return {
+        'id': post_id,
+        'upvotes': post['upvotes'],
+        'downvotes': post['downvotes'],
+        'user_vote': user_vote
+    }
+
+
+================================================
+File: model_db.py
+================================================
+# Model data module
+from . import db
+import math
+import random
+from datetime import datetime
+
+# Define namespaces
+STATION_DATA = 'station_data'
+RISK_WEIGHTS = 'risk_weights'
+
+# Initialize station data
+def init_station_data():
+    return {
+        '1': {
+            'amplification_factor': 0.23,
+            'elevation': 25.5,
+            'impervious_cover': 0.85,
+            'drainage_area': 200,
+            'drainage_volume': 10000,
+            'slope': 0.05,
+            'proximity_to_water': 300
+        },
+        '2': {
+            'amplification_factor': 0.19,
+            'elevation': 18.3,
+            'impervious_cover': 0.78,
+            'drainage_area': 180,
+            'drainage_volume': 8500,
+            'slope': 0.04,
+            'proximity_to_water': 450
+        },
+        '3': {
+            'amplification_factor': 0.27,
+            'elevation': 12.1,
+            'impervious_cover': 0.92,
+            'drainage_area': 250,
+            'drainage_volume': 12000,
+            'slope': 0.02,
+            'proximity_to_water': 200
+        }
+    }
+
+# Initialize risk weights
+def init_risk_weights():
+    return {
+        'amplification_factor': 0.4,
+        'elevation': 0.2,
+        'impervious_cover': 0.1,
+        'drainage': 0.15,
+        'slope': 0.1,
+        'proximity_to_water': 0.05
+    }
+
+# Register with the database
+db.register(STATION_DATA, init_station_data)
+db.register(RISK_WEIGHTS, init_risk_weights)
+
+# Initialize data
+db.initialize(STATION_DATA, init_station_data)
+db.initialize(RISK_WEIGHTS, init_risk_weights)
+
+# Model functions
+def get_station_data(station_id=None):
+    """Get station data for a specific station or all stations"""
+    if station_id:
+        return db.get(STATION_DATA, station_id)
+    return db.get(STATION_DATA)
+
+def update_station_data(station_id, data):
+    """Update station data for a specific station"""
+    if db.get(STATION_DATA, station_id):
+        return db.update(STATION_DATA, station_id, data)
+    return db.set(STATION_DATA, station_id, data)
+
+def get_risk_weights():
+    """Get current risk weights"""
+    return db.get(RISK_WEIGHTS)
+
+def update_risk_weights(weights):
+    """Update risk weights"""
+    current_weights = db.get(RISK_WEIGHTS)
+    current_weights.update(weights)
+    
+    # Normalize weights to sum to 1
+    weight_sum = sum(current_weights.values())
+    normalized_weights = {k: v / weight_sum for k, v in current_weights.items()}
+    
+    for k, v in normalized_weights.items():
+        db.update(RISK_WEIGHTS, k, v)
+    
+    return normalized_weights
+
+def predict_waterlogging(station_code, rainfall, timestamp=None, weather=None, windspeed=None):
+    """Predict waterlogging based on input parameters"""
+    station_data = get_station_data(station_code)
+    if not station_data:
+        station_data = get_station_data('1')  # Default to station 1
+    
+    # More rainfall and higher amplification factor leads to deeper waterlogging
+    waterlogging_depth = rainfall * station_data['amplification_factor'] / 1000.0
+    
+    # Add some realistic variation based on other factors
+    elevation_factor = 1.0 - (station_data['elevation'] / 50.0)  # Lower elevation = more water
+    impervious_factor = station_data['impervious_cover']  # More impervious = more water
+    slope_factor = 1.0 - (station_data['slope'] * 10)  # Lower slope = more water
+    
+    # Apply factors
+    waterlogging_depth = waterlogging_depth * (1 + elevation_factor) * (1 + impervious_factor) * (1 + slope_factor)
+    
+    # Apply weather factor if provided
+    if weather is not None:
+        weather_factor = 1.0 + (weather / 10.0)
+        waterlogging_depth *= weather_factor
+        
+    # Apply windspeed factor if provided
+    if windspeed is not None:
+        wind_factor = 1.0 - (min(windspeed, 50) / 100.0)  # Higher wind can reduce pooling
+        waterlogging_depth *= wind_factor
+    
+    # Set a minimum depth for realism
+    waterlogging_depth = max(0.01, waterlogging_depth)
+    
+    # Round to realistic precision
+    waterlogging_depth = round(waterlogging_depth, 2)
+    
+    # Calculate risk
+    risk_weights = get_risk_weights()
+    risk_score = (
+        risk_weights['amplification_factor'] * station_data['amplification_factor'] +
+        risk_weights['elevation'] * (1 - station_data['elevation'] / 50.0) +
+        risk_weights['impervious_cover'] * station_data['impervious_cover'] +
+        risk_weights['drainage'] * (1 - station_data['drainage_area'] / 300.0) +
+        risk_weights['slope'] * (1 - station_data['slope'] * 10) +
+        risk_weights['proximity_to_water'] * (1 - station_data['proximity_to_water'] / 500.0)
+    )
+    
+    # Ensure score is between 0 and 1
+    risk_score = max(0, min(risk_score, 1))
+    risk_score = round(risk_score, 2)
+    
+    # Determine risk level
+    if risk_score < 0.3:
+        risk_level = 'low'
+    elif risk_score < 0.6:
+        risk_level = 'moderate'
+    else:
+        risk_level = 'high'
+        
+    return {
+        'waterlogging_depth': waterlogging_depth,
+        'risk_factor': {
+            'risk_score': risk_score,
+            'risk_level': risk_level,
+            'amplification_factor': station_data['amplification_factor'],
+            'factors': {
+                'elevation': round(1 - station_data['elevation'] / 50.0, 2),
+                'impervious_cover': station_data['impervious_cover'],
+                'drainage': round(1 - station_data['drainage_area'] / 300.0, 2),
+                'slope': round(1 - station_data['slope'] * 10, 2),
+                'proximity_to_water': round(1 - station_data['proximity_to_water'] / 500.0, 2)
+            }
+        }
+    }
+
+def process_feedback(station_code, rainfall, actual_waterdepth, timestamp=None, weather=None, windspeed=None):
+    """Process feedback to improve the model"""
+    # Get the predicted depth
+    prediction = predict_waterlogging(station_code, rainfall, timestamp, weather, windspeed)
+    waterlogging_depth = prediction['waterlogging_depth']
+    
+    # Calculate error
+    error = abs(waterlogging_depth - actual_waterdepth)
+    
+    # In a real implementation, we'd update the model
+    # For our mock implementation, we'll just simulate it by slightly
+    # adjusting the amplification factor for the station
+    station_data = get_station_data(station_code)
+    if station_data:
+        # Calculate a new amplification factor based on the actual depth
+        new_af = actual_waterdepth / (rainfall / 1000.0)
+        
+        # Use an exponential moving average to update the factor
+        alpha = 0.3  # Smoothing factor
+        updated_af = alpha * new_af + (1 - alpha) * station_data['amplification_factor']
+        
+        # Update the station data
+        station_data['amplification_factor'] = round(updated_af, 2)
+        update_station_data(station_code, station_data)
+    
+    return {
+        'previous_prediction': waterlogging_depth,
+        'actual_value': actual_waterdepth,
+        'error': round(error, 2)
+    }
+
+
+================================================
+File: route_db.py
+================================================
+# Route planning data module
+from . import db
+import random
+import math
+from datetime import datetime
+
+# Define namespaces
+LOCATIONS = 'route_locations'
+ROUTE_TYPES = 'route_types'
+
+# Initialize locations
+def init_locations():
+    return {
+        'dhaka': {'lat': 23.8103, 'lon': 90.4125, 'name': 'Dhaka'},
+        'khulna': {'lat': 22.8456, 'lon': 89.5403, 'name': 'Khulna'},
+        'chittagong': {'lat': 22.3569, 'lon': 91.7832, 'name': 'Chittagong'},
+        'rajshahi': {'lat': 24.3745, 'lon': 88.6042, 'name': 'Rajshahi'},
+        'sylhet': {'lat': 24.8949, 'lon': 91.8687, 'name': 'Sylhet'},
+    }
+
+# Initialize route types
+def init_route_types():
+    return ['safe', 'balanced', 'shortest']
+
+# Register with the database
+db.register(LOCATIONS, init_locations)
+db.register(ROUTE_TYPES, init_route_types)
+
+# Initialize data
+db.initialize(LOCATIONS, init_locations)
+db.initialize(ROUTE_TYPES, init_route_types)
+
+# Helper functions
+def get_location_coordinates(location_name):
+    """Get coordinates for a location name"""
+    # Case-insensitive match
+    location_key = location_name.lower()
+    locations = db.get(LOCATIONS)
+    
+    if location_key in locations:
+        return locations[location_key]
+    else:
+        # Generate consistent coordinates for unknown locations
+        hash_value = sum(ord(c) for c in location_name)
+        return {
+            'lat': 23.685 + (hash_value % 10) * 0.02,
+            'lon': 90.356 + (hash_value % 7) * 0.02,
+            'name': location_name
+        }
+
+def haversine(lat1, lon1, lat2, lon2):
+    """Calculate the great-circle distance between two points in meters"""
+    R = 6371e3  # Earth radius in meters
+    φ1 = math.radians(lat1)
+    φ2 = math.radians(lat2)
+    Δφ = math.radians(lat2 - lat1)
+    Δλ = math.radians(lon2 - lon1)
+    
+    a = math.sin(Δφ/2) * math.sin(Δφ/2) + math.cos(φ1) * math.cos(φ2) * math.sin(Δλ/2) * math.sin(Δλ/2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    
+    return R * c
+
+def generate_segments(start, end, route_type, total_distance):
+    """Generate route segments"""
+    segments = []
+    
+    # Number of segments depends on route type
+    num_segments = 2 if route_type == 'safe' else 3 if route_type == 'balanced' else 4
+    segment_distance = total_distance / num_segments
+    
+    # Define risk profiles for each route type
+    risk_profiles = {
+        'safe': ['none', 'none', 'low'],
+        'balanced': ['low', 'medium', 'low'],
+        'shortest': ['medium', 'high', 'extreme', 'high']
+    }
+    
+    # Define road types
+    road_types = ['highway', 'major', 'local', 'bridge']
+    
+    current_point = start
+    
+    for i in range(num_segments):
+        ratio = (i + 1) / num_segments
+        next_point = end if i == num_segments - 1 else {
+            'lat': start['lat'] + (end['lat'] - start['lat']) * ratio,
+            'lon': start['lon'] + (end['lon'] - start['lon']) * ratio
+        }
+        
+        # Get waterlogging risk for this segment
+        flood_risk = risk_profiles[route_type][i % len(risk_profiles[route_type])]
+        
+        # Get road type
+        road_type = road_types[i % len(road_types)]
+        
+        # Calculate realistic duration based on distance and road type
+        speed_factors = {'highway': 80, 'major': 60, 'local': 40, 'bridge': 70}
+        speed = speed_factors[road_type]  # km/h
+        duration = int((segment_distance / 1000) / speed * 3600)  # seconds
+        
+        segments.append({
+            'startPoint': current_point,
+            'endPoint': next_point,
+            'distance': int(segment_distance),
+            'duration': duration,
+            'floodRisk': flood_risk,
+            'roadType': road_type
+        })
+        
+        current_point = next_point
+    
+    return segments
+
+def generate_safety_issues(route_type, start, end):
+    """Generate safety issues based on route type"""
+    issues = []
+    
+    if route_type == 'balanced':
+        # One moderate issue for balanced routes
+        issues.append({
+            'type': 'waterlogging',
+            'description': 'Moderate waterlogging reported along this route',
+            'severity': 'warning',
+            'location': {
+                'lat': start['lat'] + (end['lat'] - start['lat']) * 0.4,
+                'lon': start['lon'] + (end['lon'] - start['lon']) * 0.4
+            }
+        })
+    elif route_type == 'shortest':
+        # Multiple severe issues for shortest routes
+        issues.append({
+            'type': 'waterlogging',
+            'description': 'Severe waterlogging reported on multiple segments',
+            'severity': 'danger',
+            'location': {
+                'lat': start['lat'] + (end['lat'] - start['lat']) * 0.3,
+                'lon': start['lon'] + (end['lon'] - start['lon']) * 0.3
+            }
+        })
+        issues.append({
+            'type': 'closure',
+            'description': 'Road closure due to high water levels',
+            'severity': 'danger',
+            'location': {
+                'lat': start['lat'] + (end['lat'] - start['lat']) * 0.7,
+                'lon': start['lon'] + (end['lon'] - start['lon']) * 0.7
+            }
+        })
+    
+    return issues
+
+# Route planning functions
+def find_routes(start_location, end_location, timestamp=None):
+    """Find safe routes between two locations"""
+    # Get coordinates
+    start_coords = get_location_coordinates(start_location)
+    end_coords = get_location_coordinates(end_location)
+    
+    # Calculate straight-line distance (in meters)
+    straight_line_distance = haversine(
+        start_coords['lat'], start_coords['lon'],
+        end_coords['lat'], end_coords['lon']
+    )
+    
+    # Road distance is typically longer than straight-line distance
+    road_distance = straight_line_distance * 1.3
+    
+    # Get route types
+    route_types = db.get(ROUTE_TYPES)
+    
+    # Generate routes
+    routes = []
+    for i, route_type in enumerate(route_types):
+        # Adjust distance based on route type
+        distance_factor = 1.15 if route_type == 'safe' else 1.0 if route_type == 'balanced' else 0.9
+        total_distance = road_distance * distance_factor
+        
+        segments = generate_segments(start_coords, end_coords, route_type, total_distance)
+        
+        # Calculate total distance and duration
+        total_distance = sum(segment['distance'] for segment in segments)
+        total_duration = sum(segment['duration'] for segment in segments)
+        
+        # Set safety score based on route type
+        safety_scores = {'safe': 92, 'balanced': 75, 'shortest': 45}
+        
+        # Generate safety issues
+        safety_issues = generate_safety_issues(route_type, start_coords, end_coords)
+        
+        routes.append({
+            'id': f'route-{i+1}',
+            'name': f"{route_type.capitalize()} Route",
+            'startLocation': start_coords,
+            'endLocation': end_coords,
+            'segments': segments,
+            'totalDistance': int(total_distance),
+            'totalDuration': int(total_duration),
+            'safetyScore': safety_scores[route_type],
+            'safetyIssues': safety_issues
+        })
+    
+    return routes
+
+
+================================================
+File: weather_db.py
+================================================
+# Weather data module
+from . import db
+import random
+from datetime import datetime, timedelta
+
+# Define namespaces
+LOCATIONS = 'locations'
+RAINFALL_INTENSITIES = 'rainfall_intensities'
+WEATHER_CONDITIONS = 'weather_conditions'
+
+# Initialize location data
+def init_locations():
+    return {
+        '23.8103,90.4125': 'Dhaka, Bangladesh',
+        '22.8456,89.5403': 'Khulna, Bangladesh',
+        '22.3569,91.7832': 'Chittagong, Bangladesh',
+    }
+
+# Initialize rainfall intensities
+def init_rainfall_intensities():
+    return {
+        'none': [0, 0.5],
+        'light': [0.5, 5],
+        'medium': [5, 10],
+        'heavy': [10, 20],
+        'extreme': [20, 50]
+    }
+
+# Initialize weather conditions
+def init_weather_conditions():
+    return {
+        'none': ['Clear', 'Sunny', 'Partly Cloudy'],
+        'light': ['Light Rain', 'Drizzle', 'Scattered Showers'],
+        'medium': ['Moderate Rain', 'Steady Rain'],
+        'heavy': ['Heavy Rain', 'Downpour', 'Thunderstorm'],
+        'extreme': ['Extreme Rain', 'Severe Thunderstorm', 'Torrential Rain']
+    }
+
+# Register with the database
+db.register(LOCATIONS, init_locations)
+db.register(RAINFALL_INTENSITIES, init_rainfall_intensities)
+db.register(WEATHER_CONDITIONS, init_weather_conditions)
+
+# Initialize data
+db.initialize(LOCATIONS, init_locations)
+db.initialize(RAINFALL_INTENSITIES, init_rainfall_intensities)
+db.initialize(WEATHER_CONDITIONS, init_weather_conditions)
+
+# Helper functions
+def get_location_name(lat, lon):
+    """Get the name of a location based on coordinates"""
+    key = f"{lat},{lon}"
+    locations = db.get(LOCATIONS)
+    return locations.get(key, f"Location at {lat}, {lon}")
+
+def generate_rainfall_data(intensity=None):
+    """Generate random rainfall data"""
+    intensities = list(db.get(RAINFALL_INTENSITIES).keys())
+    
+    if not intensity:
+        intensity = random.choice(intensities)
+        
+    rate_range = db.get(RAINFALL_INTENSITIES, intensity)
+    return {
+        'intensity': intensity,
+        'rate': round(random.uniform(rate_range[0], rate_range[1]), 1)
+    }
+
+def generate_weather_condition(intensity):
+    """Generate a random weather condition based on rainfall intensity"""
+    conditions = db.get(WEATHER_CONDITIONS, intensity)
+    return random.choice(conditions)
+
+# Weather API functions
+def get_current_weather(lat, lon):
+    """Get current weather for specified coordinates"""
+    # Generate random rainfall intensity with weighted probabilities
+    intensities = list(db.get(RAINFALL_INTENSITIES).keys())
+    intensity = random.choices(
+        intensities,
+        weights=[0.1, 0.2, 0.3, 0.3, 0.1],
+        k=1
+    )[0]
+    
+    rainfall_data = generate_rainfall_data(intensity)
+    condition = generate_weather_condition(intensity)
+    
+    # Get location name
+    location = get_location_name(lat, lon)
+    
+    # Generate random temperature (Celsius for Bangladesh)
+    temperature = round(random.uniform(25, 32), 1)
+    
+    return {
+        'location': location,
+        'currentCondition': condition,
+        'temperature': temperature,
+        'rainfall': rainfall_data,
+        'timestamp': datetime.utcnow().isoformat() + 'Z'
+    }
+
+def get_weather_forecast(lat, lon):
+    """Get weather forecast for specified coordinates"""
+    # Get location name
+    location = get_location_name(lat, lon)
+    
+    # Generate forecast for 3 hours
+    forecast = []
+    base_temperature = round(random.uniform(25, 32), 1)
+    
+    # Start with random intensity
+    intensities = list(db.get(RAINFALL_INTENSITIES).keys())
+    intensity_idx = random.randint(0, len(intensities)-1)
+    
+    for i in range(3):
+        # Weather trend tends to improve or worsen gradually
+        intensity_change = random.choice([-1, 0, 0, 1])
+        intensity_idx = max(0, min(len(intensities)-1, intensity_idx + intensity_change))
+        
+        intensity = intensities[intensity_idx]
+        rainfall_data = generate_rainfall_data(intensity)
+        condition = generate_weather_condition(intensity)
+        
+        # Temperature slightly changes over time
+        temperature = round(base_temperature - (i * random.uniform(0.5, 1.5)), 1)
+        
+        forecast.append({
+            'time': f"{i+1}h",
+            'condition': condition,
+            'temperature': temperature,
+            'rainfall': rainfall_data
+        })
+    
+    return {
+        'location': location,
+        'forecast': forecast
+    }
+
+def get_weather_alerts(lat, lon):
+    """Get weather alerts for specified coordinates"""
+    # Get location name
+    location = get_location_name(lat, lon)
+    
+    # Generate alerts based on random intensity
+    alerts = []
+    intensities = list(db.get(RAINFALL_INTENSITIES).keys())
+    intensity = random.choices(
+        intensities,
+        weights=[0.3, 0.2, 0.2, 0.2, 0.1],
+        k=1
+    )[0]
+    
+    # Only generate alerts for medium, heavy, or extreme rainfall
+    if intensity in ['medium', 'heavy', 'extreme']:
+        alert_types = {
+            'medium': {
+                'type': 'Rainfall Advisory',
+                'severity': 'info',
+                'title': 'Rainfall Advisory',
+                'description': 'Moderate rainfall expected. Be aware of possible minor waterlogging in low-lying areas.',
+            },
+            'heavy': {
+                'type': 'waterlogging Watch',
+                'severity': 'warning',
+                'title': 'waterlogging Watch',
+                'description': 'Heavy rainfall may cause waterlogging in prone areas. Take precautionary measures.',
+            },
+            'extreme': {
+                'type': 'Flash waterlogging',
+                'severity': 'danger',
+                'title': 'Flash waterlogging Warning',
+                'description': 'Flash waterlogging is occurring or imminent in the warned area. Move to higher ground immediately.',
+            }
+        }
+        
+        alert = alert_types[intensity]
+        now = datetime.now()
+        
+        alerts.append({
+            **alert,
+            'issued': now.isoformat() + 'Z',
+            'expires': (now + timedelta(hours=6)).isoformat() + 'Z'
+        })
+    
+    return {
+        'location': location,
+        'alerts': alerts
+    }
+
