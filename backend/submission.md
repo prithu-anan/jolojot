@@ -6,15 +6,8 @@
 
 -  **Live Deployment**:  
 
-  🔗 [Hosted Model URL](<insert-live-project-url-here>)
-  🔗 [Hosted Project URL](<insert-live-project-url-here>)  
-  *OR*  
-  - ✅ **API Endpoint**:  
-    🔗 [API Endpoint Link](<insert-api-link-here>)  
-    📖 [API Testing Guide](<insert-api-guide-link-here>)
-
-- ⚠️ **If Deployment is Not Available**:  
-  📚 [Local Setup Guide](<insert-setup-guide-link-here>)
+  🔗 [Hosted Model URL](https://rain-route-refuge.vercel.app/)
+  🔗 [Hosted Project URL](https://waterlogging-prediction.onrender.com/model/weights)  
 
 ---
 
@@ -44,7 +37,7 @@
 
 ### 💻 4. GitHub Repository (All Code Pushed)
 
-🔗 [GitHub Repository](<insert-github-link-here>)
+🔗 [GitHub Repository](https://github.com/prithu-anan/jolojot)
 
 **Repository Checklist:**
 
