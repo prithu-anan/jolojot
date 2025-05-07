@@ -57,38 +57,36 @@ export default function Index() {
     <div className="flex flex-col min-h-screen">
       <header className="bg-background border-b border-border">
         <div className="container mx-auto py-4 px-4 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <CloudRain className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">জলজট</h1>
-        </div>
-        <nav className="flex gap-4 items-center">
-  <Link to="/forum" className="font-bold hover:text-primary transition-colors">
-    Forum
-  </Link>
-  <Link to="/authority" className="font-bold hover:text-primary transition-colors">
-    Dashboard
-  </Link>
-  {!loading && (
-    <>
-      {user ? (
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground hidden md:inline-block">
-            {user.email}
-          </span>
-          <Button variant="outline" size="sm" onClick={handleSignOut}>
-            Sign Out
-          </Button>
-        </div>
-      ) : (
-        <Button size="sm" onClick={() => navigate('/auth')}>
-          Sign In
-        </Button>
-      )}
-    </>
-  )}
-</nav>
-
-
+          <div className="flex items-center gap-2">
+            <CloudRain className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-bold">জলজট</h1>
+          </div>
+          <nav className="flex gap-4 items-center">
+            <Link to="/forum" className="font-bold hover:text-primary transition-colors">
+              Forum
+            </Link>
+            <Link to="/authority" className="font-bold hover:text-primary transition-colors">
+              Dashboard
+            </Link>
+            {!loading && (
+              <>
+                {user ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground hidden md:inline-block">
+                      {user.email}
+                    </span>
+                    <Button variant="outline" size="sm" onClick={handleSignOut}>
+                      Sign Out
+                    </Button>
+                  </div>
+                ) : (
+                  <Button size="sm" onClick={() => navigate('/auth')}>
+                    Sign In
+                  </Button>
+                )}
+              </>
+            )}
+          </nav>
         </div>
       </header>
 
