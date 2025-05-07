@@ -10,8 +10,10 @@ const NavBar: React.FC = () => {
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-sm">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
-          <CloudRain className="h-6 w-6 text-primary" />
-          <span className="text-xl font-bold">জলজট</span>
+          <Link to="/" className="flex items-center gap-2">
+            <CloudRain className="h-6 w-6 text-primary" />
+            <span className="text-xl font-bold">জলজট</span>
+          </Link>
         </div>
 
         {/* Desktop Navigation */}

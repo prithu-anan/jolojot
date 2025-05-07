@@ -39,6 +39,11 @@ export const getSafeRoutes = (data) => api.post('/routes/plan', data);
 // Forum APIs
 export const getPosts = () => api.get('/forum/posts');
 export const createPost = (data) => api.post('/forum/create', data);
+export const uploadPostImage = (postId, formData) =>
+api.post(`/forum/posts/${postId}/images`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+});
+export const voteOnPost = (postId, data) => api.post(`/forum/posts/${postId}/vote`, data);
 
 // Auth APIs (optional stubs)
 export const login = (data) => api.post('/auth/login', data);
