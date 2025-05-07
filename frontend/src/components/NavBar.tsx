@@ -23,7 +23,6 @@ const NavBar: React.FC = () => {
               <li><Link to="/" className="font-medium hover:text-primary">Home</Link></li>
               <li><Link to="/authority" className="font-medium hover:text-primary">Dashboard</Link></li>
               <li><Link to="/routes" className="font-medium hover:text-primary">Route Planner</Link></li>
-              <li><Link to="/safety" className="font-medium hover:text-primary">Safety Tips</Link></li>
             </ul>
           </nav>
           <Link to="/predict">
@@ -55,7 +54,6 @@ const NavBar: React.FC = () => {
               <li><Link to="/" className="block font-medium hover:text-primary">Home</Link></li>
               <li><Link to="/authority" className="block font-medium hover:text-primary">Dashboard</Link></li>
               <li><Link to="/routes" className="block font-medium hover:text-primary">Route Planner</Link></li>
-              <li><Link to="/safety" className="block font-medium hover:text-primary">Safety Tips</Link></li>
             </ul>
           </nav>
           <div className="mt-4">
