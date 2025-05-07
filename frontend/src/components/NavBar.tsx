@@ -21,7 +21,7 @@ const NavBar: React.FC = () => {
           <nav>
             <ul className="flex space-x-6">
               <li><Link to="/" className="font-medium hover:text-primary">Home</Link></li>
-              <li><Link to="/map" className="font-medium hover:text-primary">Map</Link></li>
+              <li><Link to="/authority" className="font-medium hover:text-primary">Dashboard</Link></li>
               <li><Link to="/routes" className="font-medium hover:text-primary">Route Planner</Link></li>
               <li><Link to="/safety" className="font-medium hover:text-primary">Safety Tips</Link></li>
             </ul>
@@ -53,7 +53,7 @@ const NavBar: React.FC = () => {
           <nav>
             <ul className="flex flex-col space-y-4">
               <li><Link to="/" className="block font-medium hover:text-primary">Home</Link></li>
-              <li><Link to="/map" className="block font-medium hover:text-primary">Map</Link></li>
+              <li><Link to="/authority" className="block font-medium hover:text-primary">Dashboard</Link></li>
               <li><Link to="/routes" className="block font-medium hover:text-primary">Route Planner</Link></li>
               <li><Link to="/safety" className="block font-medium hover:text-primary">Safety Tips</Link></li>
             </ul>

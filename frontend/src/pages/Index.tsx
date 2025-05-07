@@ -61,29 +61,34 @@ export default function Index() {
           <CloudRain className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold">জলজট</h1>
         </div>
-          <nav className="flex gap-4 items-center">
-            <Link to="/forum" className="hover:text-primary transition-colors">
-              Forum
-            </Link>
-            {!loading && (
-              <>
-                {user ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground hidden md:inline-block">
-                      {user.email}
-                    </span>
-                    <Button variant="outline" size="sm" onClick={handleSignOut}>
-                      Sign Out
-                    </Button>
-                  </div>
-                ) : (
-                  <Button size="sm" onClick={() => navigate('/auth')}>
-                    Sign In
-                  </Button>
-                )}
-              </>
-            )}
-          </nav>
+        <nav className="flex gap-4 items-center">
+  <Link to="/forum" className="font-bold hover:text-primary transition-colors">
+    Forum
+  </Link>
+  <Link to="/authority" className="font-bold hover:text-primary transition-colors">
+    Dashboard
+  </Link>
+  {!loading && (
+    <>
+      {user ? (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground hidden md:inline-block">
+            {user.email}
+          </span>
+          <Button variant="outline" size="sm" onClick={handleSignOut}>
+            Sign Out
+          </Button>
+        </div>
+      ) : (
+        <Button size="sm" onClick={() => navigate('/auth')}>
+          Sign In
+        </Button>
+      )}
+    </>
+  )}
+</nav>
+
+
         </div>
       </header>
 
