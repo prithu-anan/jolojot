@@ -5,10 +5,12 @@ import { Button } from '@/components/ui/button';
 import RouteMap from '@/components/RouteMap';
 import RoutePlanner from '@/components/RoutePlanner';
 import { getCurrentLocation } from '@/utils/weatherApi';
+import { Route } from '@/utils/routeUtils';
 
 const RoutePlanningPage: React.FC = () => {
   const navigate = useNavigate();
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [routes, setRoutes] = useState<Route[]>([]);
   const [userLocation, setUserLocation] = useState<{ lat: number; lon: number } | null>(null);
 
   useEffect(() => {
@@ -28,8 +30,9 @@ const RoutePlanningPage: React.FC = () => {
     fetchUserLocation();
   }, []);
 
-  const handleRouteSelect = (routeId: string) => {
+  const handleRouteSelect = (routeId: string, allRoutes: Route[]) => {
     setSelectedRouteId(routeId);
+    setRoutes(allRoutes);
   };
 
   return (
@@ -43,7 +46,7 @@ const RoutePlanningPage: React.FC = () => {
             </Button>
           </div>
           <h1 className="text-2xl font-bold">Route Planner</h1>
-          <div className="w-24"></div> {/* Spacer for centering */}
+          <div className="w-24"></div>
         </div>
       </header>
 
@@ -55,7 +58,7 @@ const RoutePlanningPage: React.FC = () => {
 
           <div className="lg:col-span-2">
             <div className="bg-card border rounded-lg shadow-sm overflow-hidden h-[600px]">
-              <RouteMap selectedRouteId={selectedRouteId} userLocation={userLocation} />
+              <RouteMap selectedRouteId={selectedRouteId} userLocation={userLocation} routes={routes} />
             </div>
           </div>
         </div>
